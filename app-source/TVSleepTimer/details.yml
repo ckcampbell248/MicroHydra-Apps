@@ -13,8 +13,18 @@ description: |
   configurable IR code (NEC protocol) via `config.json` for different TV
   brands/models. Ships pre-configured with a working LG TV power-off code.
 
+  Note: the default IR code is only confirmed to work on some LG TVs. If
+  your TV is a different brand/model, you will need to find the correct
+  NEC address/command (or raw IR signal) for your TV's power button and
+  update `config.json` accordingly before the app will work with your TV.
+  Code databases such as Flipper-IRDB (https://github.com/Lucaslhm/Flipper-IRDB)
+  are a good place to look these up.
+
 installation_instructions: |
-  Copy the `TVSleepTimer` folder into your `/apps` folder.
+  Copy the `TVSleepTimer` folder into your `/apps` folder. Before use,
+  check `config.json` and update `power_address`/`power_command` (or
+  `power_signal` for raw codes) to match your TV's brand/model if it is
+  not an LG TV using the default code.
 
 devices:
 - Cardputer
