@@ -58,7 +58,7 @@ num_iterations = 32
 
 palette = build_palette(num_iterations, bg_color)
 
-# Generate the Mandelbrot set and plot directly to the display
+# Generate the Mandelbrot set and plot into the display's framebuffer.
 re = linspace(xmin, xmax, width)
 im = linspace(ymin, ymax, height)
 
@@ -66,12 +66,22 @@ for y, imag in enumerate(im):
     for x, real in enumerate(re):
         c = complex(real, imag)
         count = escape_count(c, num_iterations)
-        display.pixel(x, y, palette[count])
-
-# push the finished render to the screen. (Only calling show() once
-# the whole frame is drawn avoids visual artifacts from partial
-# screen refreshes mid-render.)
-display.show()
+        # Use vline() with length 1 instead of pixel(): pixel() sets the
+        # display driver's "dirty rows to flush" range to (y, y), which
+        # show() treats as empty and skips -- so per-row show() calls
+        # would silently no-op after the first row. vline(x, y, 1, ...)
+        # draws the same single pixel but sets a proper (y, y+1) range,
+        # so each row actually gets flushed to the screen as it's drawn.
+        display.vline(x, y, 1, palette[count])
+        # yield periodically so the CPU-heavy per-pixel math doesn't
+        # starve the system's idle task long enough to trip the ESP32
+        # watchdog.
+        if x % 20 == 0:
+            time.sleep_ms(0)
+    # flush this row to the screen now, so the image builds up visibly
+    # line by line instead of appearing all at once at the end.
+    display.show()
+    time.sleep_ms(1)
 
 # leave the finished render on screen until a key is pressed, then exit
 # back to the launcher (matches how other MicroHydra apps behave).
