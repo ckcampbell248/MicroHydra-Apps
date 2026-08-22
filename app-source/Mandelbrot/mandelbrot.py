@@ -1,34 +1,17 @@
-import machine
-import json
-import neopixel
 import time
-from lib import st7789py
-from font import vga1_8x16 as small_font
-from machine import SPI, Pin, PWM, freq, reset, Timer
-
-with open("config.json", "r") as conf:
-    config = json.loads(conf.read())
-    ui_color = config["ui_color"]
-    bg_color = config["bg_color"]
+from machine import freq, reset
+from lib.display import Display
+from lib.hydra.config import Config
+from lib.userinput import UserInput
+from lib.hydra.color import color565
 
 freq(240000000)
-ledPin = Pin(21)
-led = neopixel.NeoPixel(ledPin, 1, bpp=3)
 
-display = st7789py.ST7789(
-    SPI(1, baudrate=40000000, sck=Pin(36), mosi=Pin(35), miso=None),
-    135,
-    240,
-    reset=Pin(33, Pin.OUT),
-    cs=Pin(37, Pin.OUT),
-    dc=Pin(34, Pin.OUT),
-    backlight=None,
-    rotation=1,
-    color_order=st7789py.BGR
-    )
-blight = PWM(Pin(38, Pin.OUT))
-blight.freq(1000)
-blight.duty_u16(40000)
+display = Display()
+config = Config()
+kb = UserInput()
+
+bg_color = config.palette[2]
 
 # Emulate the np.linspace funtion
 def linspace(start, stop, num):
@@ -55,7 +38,7 @@ def build_palette(num_iterations, bg_color):
         r = int(9 * (1 - t) * t * t * t * 255)
         g = int(15 * (1 - t) * (1 - t) * t * t * 255)
         b = int(8.5 * (1 - t) * (1 - t) * (1 - t) * t * 255)
-        palette.append(st7789py.color565(r, g, b))
+        palette.append(color565(r, g, b))
     palette.append(bg_color)  # index == num_iterations -> in the set
     return palette
 
@@ -84,5 +67,18 @@ for y, imag in enumerate(im):
         c = complex(real, imag)
         count = escape_count(c, num_iterations)
         display.pixel(x, y, palette[count])
-            
-time.sleep(10)
+
+# push the finished render to the screen. (Only calling show() once
+# the whole frame is drawn avoids visual artifacts from partial
+# screen refreshes mid-render.)
+display.show()
+
+# leave the finished render on screen until a key is pressed, then exit
+# back to the launcher (matches how other MicroHydra apps behave).
+prev_keys = kb.get_pressed_keys()
+while True:
+    keys = kb.get_pressed_keys()
+    if keys and keys != prev_keys:
+        reset()
+    prev_keys = keys
+    time.sleep_ms(50)

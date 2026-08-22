@@ -18,8 +18,10 @@ Controls:
 
 import json
 import time
-from machine import SPI, Pin
-from lib import st7789py, keyboard
+from machine import Pin
+from lib.display import Display
+from lib.userinput import UserInput
+from lib.hydra.color import color565
 from font import vga2_16x32 as big_font
 from font import vga1_8x16 as small_font
 
@@ -57,8 +59,8 @@ def load_config():
 
 
 config = load_config()
-ui_color = st7789py.color565(*config.get("ui_color_rgb", [160, 20, 20]))
-bg_color = st7789py.color565(*config.get("bg_color_rgb", [0, 0, 0]))
+ui_color = color565(*config.get("ui_color_rgb", [160, 20, 20]))
+bg_color = color565(*config.get("bg_color_rgb", [0, 0, 0]))
 tv_label = f'{config.get("tv_brand", "?")} {config.get("tv_model", "?")}'
 default_minutes = config.get("default_minutes", 30)
 add_minutes = config.get("add_minutes", 10)
@@ -76,19 +78,9 @@ def send_power_signal():
 
 
 # display setup (matches the pattern used by other MicroHydra apps)
-tft = st7789py.ST7789(
-    SPI(1, baudrate=40000000, sck=Pin(36), mosi=Pin(35), miso=None),
-    135,
-    240,
-    reset=Pin(33, Pin.OUT),
-    cs=Pin(37, Pin.OUT),
-    dc=Pin(34, Pin.OUT),
-    backlight=Pin(38, Pin.OUT),
-    rotation=1,
-    color_order=st7789py.BGR,
-)
+tft = Display()
 
-kb = keyboard.KeyBoard()
+kb = UserInput()
 ir = IRTransmitter(Pin(PIN_IR_LED, Pin.OUT), duty=power_duty)
 
 
@@ -116,21 +108,24 @@ def update_big_text(text, area=DIGIT_AREA):
     x, y, w, h = area
     tft.fill_rect(x, y, w, h, bg_color)
     text_x = 120 - len(text) * 16 // 2
-    tft.text(big_font, text, text_x, y, ui_color, bg_color)
+    tft.text(text, text_x, y, ui_color, big_font)
+    tft.show()
 
 
 def update_status(status):
     """Redraw only the status-line region."""
     x, y, w, h = STATUS_AREA
     tft.fill_rect(x, y, w, h, bg_color)
-    tft.text(small_font, status, x, y, ui_color, bg_color)
+    tft.text(status, x, y, ui_color, small_font)
+    tft.show()
 
 
 def draw_entry_static():
     tft.fill(bg_color)
-    tft.text(small_font, "TV Sleep Timer", 8, 8, ui_color, bg_color)
-    tft.text(small_font, tv_label, 8, 28, ui_color, bg_color)
-    tft.text(small_font, "type minutes, ENT: start", 8, 112, ui_color, bg_color)
+    tft.text("TV Sleep Timer", 8, 8, ui_color, small_font)
+    tft.text(tv_label, 8, 28, ui_color, small_font)
+    tft.text("type minutes, ENT: start", 8, 112, ui_color, small_font)
+    tft.show()
 
 
 def entry_screen():
@@ -193,23 +188,24 @@ def format_countdown(seconds_left):
 
 def draw_countdown_static():
     tft.fill(bg_color)
-    tft.text(small_font, tv_label, 8, 8, ui_color, bg_color)
+    tft.text(tv_label, 8, 8, ui_color, small_font)
 
     # hint line: [icon] +Nm   [icon] -Nm   GO: cancel
     x, y = 4, 118
     draw_triangle_up(x, y + 4, 8, 8, ui_color)
     x += 12
     add_label = f"+{add_minutes}m"
-    tft.text(small_font, add_label, x, y, ui_color, bg_color)
+    tft.text(add_label, x, y, ui_color, small_font)
     x += len(add_label) * 8 + 8
 
     draw_triangle_down(x, y + 4, 8, 8, ui_color)
     x += 12
     sub_label = f"-{add_minutes}m"
-    tft.text(small_font, sub_label, x, y, ui_color, bg_color)
+    tft.text(sub_label, x, y, ui_color, small_font)
     x += len(sub_label) * 8 + 8
 
-    tft.text(small_font, "GO: cancel", x, y, ui_color, bg_color)
+    tft.text("GO: cancel", x, y, ui_color, small_font)
+    tft.show()
 
 
 def countdown_screen(minutes):
@@ -270,11 +266,12 @@ def show_error(exc):
     launcher) so it's obvious something went wrong.
     """
     tft.fill(bg_color)
-    tft.text(small_font, "Error:", 8, 8, ui_color, bg_color)
+    tft.text("Error:", 8, 8, ui_color, small_font)
     msg = str(exc)
     for i in range(0, len(msg), 26):
-        tft.text(small_font, msg[i:i + 26], 8, 32 + (i // 26) * 16, ui_color, bg_color)
-    tft.text(small_font, "press any key to exit", 8, 118, ui_color, bg_color)
+        tft.text(msg[i:i + 26], 8, 32 + (i // 26) * 16, ui_color, small_font)
+    tft.text("press any key to exit", 8, 118, ui_color, small_font)
+    tft.show()
     prev = kb.get_pressed_keys()
     while kb.get_pressed_keys() == prev:
         pass
