@@ -12,7 +12,7 @@ Controls:
   entry screen:      digits to type minutes, BSPC to erase, ENT to start
   countdown screen:   ; : add minutes (config "add_minutes")
                       . : subtract minutes
-                      GO: cancel and return to entry screen
+                      G0: cancel and return to entry screen
   done screen:        any key returns to entry screen
 """
 
@@ -130,7 +130,7 @@ def draw_entry_static():
 
 def entry_screen():
     """Let the user type a number of minutes. Returns the chosen minute
-    count (int), or None if the user pressed GO to exit the app.
+    count (int), or None if the user pressed G0 to exit the app.
     """
     minutes_str = str(default_minutes)
     is_default = True  # first digit press replaces the default, not appends
@@ -143,7 +143,7 @@ def entry_screen():
         if pressed_keys != prev_pressed_keys:
             redraw = False
 
-            if "GO" in pressed_keys:
+            if "G0" in pressed_keys:
                 return None
 
             if "ENT" in pressed_keys and "ENT" not in prev_pressed_keys:
@@ -190,7 +190,7 @@ def draw_countdown_static():
     tft.fill(bg_color)
     tft.text(tv_label, 8, 8, ui_color, small_font)
 
-    # hint line: [icon] +Nm   [icon] -Nm   GO: cancel
+    # hint line: [icon] +Nm   [icon] -Nm   G0: cancel
     x, y = 4, 118
     draw_triangle_up(x, y + 4, 8, 8, ui_color)
     x += 12
@@ -204,13 +204,13 @@ def draw_countdown_static():
     tft.text(sub_label, x, y, ui_color, small_font)
     x += len(sub_label) * 8 + 8
 
-    tft.text("GO: cancel", x, y, ui_color, small_font)
+    tft.text("G0: cancel", x, y, ui_color, small_font)
     tft.show()
 
 
 def countdown_screen(minutes):
     """Runs the countdown. Sends the TV power-off signal at zero.
-    Returns when the user cancels (GO) or the timer finishes.
+    Returns when the user cancels (G0) or the timer finishes.
     """
     seconds_left = minutes * 60
     end_time = time.time() + seconds_left
@@ -236,7 +236,7 @@ def countdown_screen(minutes):
 
         pressed_keys = kb.get_pressed_keys()
         if pressed_keys != prev_pressed_keys:
-            if "GO" in pressed_keys:
+            if "G0" in pressed_keys:
                 return
 
             if ";" in pressed_keys and ";" not in prev_pressed_keys:
